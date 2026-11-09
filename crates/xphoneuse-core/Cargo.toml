@@ -1,0 +1,15 @@
+[package]
+name = "xphoneuse-core"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+# Timestamps in a file listing, in the machine's own timezone (files::format_time).
+chrono = "0.4"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+byteorder = "1"
+socket2 = "0.5"
+base64 = "0.22"
+roxmltree = "0.20"

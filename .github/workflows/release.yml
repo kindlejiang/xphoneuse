@@ -1,0 +1,243 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Platforms to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - linux
+          - macos
+          - windows
+          - linux,macos
+          - linux,windows
+          - macos,windows
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    outputs:
+      notes: ${{ steps.notes.outputs.notes }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(jq -r .version src-tauri/tauri.conf.json)
+            echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate release notes
+        id: notes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | grep '^v' | sed -n '2p')
+          if [ -z "$PREV_TAG" ]; then
+            LOG=$(git log --pretty=format:"- %s" --no-merges HEAD)
+          else
+            LOG=$(git log --pretty=format:"- %s" --no-merges "$PREV_TAG"..HEAD)
+          fi
+          if [ -z "$LOG" ]; then
+            LOG="- Bug fixes and improvements"
+          fi
+
+          AI_NOTES=""
+          if [ -n "$GEMINI_API_KEY" ]; then
+            PROMPT="You are writing release notes for XPhoneUse, an Android screen mirroring and control desktop app. Given these git commits, write concise user-friendly release notes in markdown. Group into New Features, Improvements, Bug Fixes as needed. Skip merge commits and internal refactors. Keep it short. Do not use em dashes. Start directly with ## What's New\n\nCommits:\n${LOG}"
+
+            BODY=$(jq -n --arg p "$PROMPT" '{contents:[{parts:[{text:$p}]}]}')
+
+            RESPONSE=$(curl -s -X POST \
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d "$BODY" 2>/dev/null || true)
+
+            AI_NOTES=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null || true)
+          fi
+
+          if [ -n "$AI_NOTES" ]; then
+            NOTES="$AI_NOTES"
+          else
+            NOTES=$(printf "## What's New\n\n%s" "$LOG")
+          fi
+
+          {
+            echo "notes<<EOFDELIM"
+            echo "$NOTES"
+            echo "EOFDELIM"
+          } >> "$GITHUB_OUTPUT"
+
+  build-linux:
+    needs: release-notes
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platforms == 'all' ||
+      contains(inputs.platforms, 'linux')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Download Linux adb
+        run: |
+          curl -fsSL -o /tmp/platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-linux.zip
+          unzip -jo /tmp/platform-tools.zip platform-tools/adb -d src-tauri/resources/
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          XPHONEUSE_APTABASE_KEY: ${{ secrets.XPHONEUSE_APTABASE_KEY }}
+          XPHONEUSE_APTABASE_HOST: ${{ secrets.XPHONEUSE_APTABASE_HOST }}
+        with:
+          tagName: ${{ needs.release-notes.outputs.tag }}
+          releaseName: "XPhoneUse ${{ needs.release-notes.outputs.tag }}"
+          releaseBody: ${{ needs.release-notes.outputs.notes }}
+          releaseDraft: false
+          prerelease: false
+          updaterJsonKeepUniversal: true
+
+  build-macos:
+    needs: release-notes
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platforms == 'all' ||
+      contains(inputs.platforms, 'macos')
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            arch: aarch64-apple-darwin
+          - runner: macos-latest
+            arch: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.arch }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Download macOS adb
+        run: |
+          curl -fsSL -o /tmp/platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+          unzip -jo /tmp/platform-tools.zip platform-tools/adb -d src-tauri/resources/
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          XPHONEUSE_APTABASE_KEY: ${{ secrets.XPHONEUSE_APTABASE_KEY }}
+          XPHONEUSE_APTABASE_HOST: ${{ secrets.XPHONEUSE_APTABASE_HOST }}
+        with:
+          tagName: ${{ needs.release-notes.outputs.tag }}
+          releaseName: "XPhoneUse ${{ needs.release-notes.outputs.tag }}"
+          releaseBody: ${{ needs.release-notes.outputs.notes }}
+          releaseDraft: false
+          prerelease: false
+          updaterJsonKeepUniversal: true
+          args: --target ${{ matrix.arch }}
+
+  build-windows:
+    needs: release-notes
+    if: >-
+      github.event_name == 'push' ||
+      inputs.platforms == 'all' ||
+      contains(inputs.platforms, 'windows')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Download Windows adb
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile "$env:TEMP\platform-tools.zip"
+          Expand-Archive -Path "$env:TEMP\platform-tools.zip" -DestinationPath "$env:TEMP\platform-tools"
+          Copy-Item "$env:TEMP\platform-tools\platform-tools\adb.exe" "src-tauri\resources\adb.exe"
+          Copy-Item "$env:TEMP\platform-tools\platform-tools\AdbWinApi.dll" "src-tauri\resources\AdbWinApi.dll"
+          Copy-Item "$env:TEMP\platform-tools\platform-tools\AdbWinUsbApi.dll" "src-tauri\resources\AdbWinUsbApi.dll"
+
+      - name: Build Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          XPHONEUSE_APTABASE_KEY: ${{ secrets.XPHONEUSE_APTABASE_KEY }}
+          XPHONEUSE_APTABASE_HOST: ${{ secrets.XPHONEUSE_APTABASE_HOST }}
+        with:
+          tagName: ${{ needs.release-notes.outputs.tag }}
+          releaseName: "XPhoneUse ${{ needs.release-notes.outputs.tag }}"
+          releaseBody: ${{ needs.release-notes.outputs.notes }}
+          releaseDraft: false
+          prerelease: false
+          updaterJsonKeepUniversal: true

@@ -1,0 +1,31 @@
+# Standalone workspace (not a member of the repo workspace): this binary is
+# shipped with the xphoneuse skill and gets its own size-optimized release
+# profile without affecting the app's build.
+[workspace]
+
+[package]
+name = "xphoneuse-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "xphoneuse-cli"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+# png + jpeg: the screenshot tool answers with JPEG by default now, and
+# the CLI has to read its dimensions and compare it.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+reqwest = { version = "0.13", features = ["json"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+
+[profile.release]
+opt-level = "z"      # optimize for size; this is a network CLI, not hot code
+lto = true           # cross-crate dead-code elimination
+codegen-units = 1
+panic = "abort"      # no unwinding needed; drops landing pads
+strip = true

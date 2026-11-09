@@ -1,0 +1,12 @@
+adb is bundled from Google's Android SDK Platform-Tools.
+
+  Source:  https://developer.android.com/tools/releases/platform-tools
+  Version: 37.0.1 (see adb-source.properties)
+  License: Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+per-platform files:
+  adb            macOS (universal: x86_64 + arm64)
+  adb.exe        Windows, with AdbWinApi.dll and AdbWinUsbApi.dll beside it
+
+The app prefers an adb it can find on the machine (an Android SDK install, or
+one on PATH) and falls back to these.

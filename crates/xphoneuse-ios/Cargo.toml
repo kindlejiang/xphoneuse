@@ -1,0 +1,65 @@
+[package]
+name = "xphoneuse-ios"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# The shared file vocabulary: locations, entries, listings (crates/xphoneuse-core
+# /src/files.rs). The dependency runs one way only - core knows nothing of iOS.
+xphoneuse-core = { path = "../xphoneuse-core" }
+libloading = "0.8"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+serialport = "4"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+base64 = "0.22"
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+# The developer image's BuildManifest.plist names the build it belongs to.
+plist = "1"
+# Downloading the developer disk image (see developer_image). Both are already
+# in the tree through tauri's own reqwest, so neither adds a compilation:
+# rustls-no-provider is the feature tauri turns on, and the crypto provider it
+# then expects is the ring one idevice already builds with.
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+idevice = { path = "../../vendor/idevice/idevice", default-features = false, features = [
+    "usbmuxd",
+    "tcp",
+    "amfi",
+    "screenshotr",
+    # Listing installed apps (launch_probe --list), so a bundle id can be
+    # checked against the device instead of guessed.
+    "installation_proxy",
+    # Simulating the device's location (src/location.rs).
+    "location_simulation",
+    # The phone's files (src/files.rs): AFC over lockdown, the same door
+    # iTunes and Explorer use for the media area. Its two dependencies
+    # (chrono, futures) are already in the tree, so this adds no compilation.
+    "afc",
+    "core_device_proxy",
+    "rsd",
+    "dvt",
+    "display_stream",
+    "xpc",
+    "tunnel_tcp_stack",
+    "pair",
+    "rustls",
+    "ring",
+    # Mounting the developer image the screen/HID/pasteboard services come
+    # from: the mounter client plus the TSS ticket the device personalizes it
+    # with (Apple's gs.apple.com, over the crate's own http client).
+    "mobile_image_mounter",
+    "tss",
+] }
+
+# Windows only: reading the COM-port device map to tell CDC-ACM apart from
+# Bluetooth serial ports (see hid::cdc_acm_ports).
+[target.'cfg(windows)'.dependencies]
+winreg = "0.55"
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+plist = "1"

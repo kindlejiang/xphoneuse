@@ -1,0 +1,16 @@
+The OCR models in this directory are PP-OCRv6 detection/recognition weights,
+converted to MNN's .mnn format and redistributed by the ocr-rs project.
+
+  Source:  https://github.com/zibo-chen/ocr-rs (models/)
+  Revision: 664a945953e46186b37203fa4902a20d60a32809
+  Upstream models: PaddleOCR PP-OCRv6 (https://github.com/PaddlePaddle/PaddleOCR)
+  License: Apache License 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+
+files:
+  PP-OCRv6_small_det.mnn   4,965,224 bytes  text detection
+  PP-OCRv6_small_rec.mnn  10,646,760 bytes  text recognition
+  ppocr_keys_v6_small.txt     74,947 bytes  recognition charset
+
+The app reads them through the `xphoneuse-ocr` crate, which looks in
+<resources>/ocr unless XPHONEUSE_OCR_MODELS points somewhere else (a checkout
+of ocr-rs has the same three filenames under models/).

@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.env
+*.env.*
+
+# Rust
+**/target/
+
+# uxplay cmake build dirs (Windows build/, macOS build-mac/)
+vendor/uxplay/build*/
+
+# Credentials
+credentials/
+
+# Website server: runtime state and the skill bundle it serves
+server/data/
+server/xphoneused
+server/xphoneused-linux-*
+server/static/skills/*.zip
+server/.env
+
+
+# Signing keys and release credentials (never commit)
+tauri.key
+tauri.key.pub
+note.txt
+xpu-release.env

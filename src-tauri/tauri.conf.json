@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "XPhoneUse",
+  "version": "1.1.25",
+  "identifier": "com.aovik.xphoneuse",
+  "build": {
+    "beforeDevCommand": "bun run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "bun run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "XPhoneUse",
+        "width": 380,
+        "height": 750,
+        "resizable": true,
+        "minWidth": 280,
+        "minHeight": 400,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "acceptFirstMouse": true,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection,msWebView2EnableTrackingPrevention"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+       "https://cdn.crabnebula.app/update/aovik/xphoneuse/{{target}}-{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI5MzAyOTMyREI2MDM5QTgKUldTb09XRGJNaWt3S2JGM2tFRXJxcTJCL1BITmkyaEdMMW9QZWwyMGVsR0NVVmR6cXVXNk52UlQK"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "resources": ["resources/*", "resources/ocr"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installerHooks": "nsis-hooks.nsh"
+      }
+    },
+    "macOS": {
+      "signingIdentity": "Developer ID Application",
+      "minimumSystemVersion": "10.15",
+      "entitlements": "entitlements.plist"
+    }
+  }
+}

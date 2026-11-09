@@ -1,0 +1,27 @@
+[workspace]
+members = [
+    "src-tauri",
+    "crates/xphoneuse-core",
+    "crates/xphoneuse-mcp",
+    "crates/xphoneuse-ios",
+    "crates/xphoneuse-ocr",
+    "crates/xphoneuse-copilot",
+]
+resolver = "2"
+# NOTE: crates/xphoneuse-cli is deliberately NOT a member — it is a
+# standalone MCP HTTP client with its own workspace and a size-optimized
+# release profile (see crates/xphoneuse-cli/Cargo.toml).
+
+# ocr-rs asks for opt-level 3 in its own manifest, but a profile in a
+# dependency is ignored: cargo reads profiles from the workspace root only.
+# Without these, OCR in a dev build runs its pre- and post-processing
+# unoptimized and looks broken (slow, and wrong-looking output on a timeout).
+[profile.dev.package.ocr-rs]
+opt-level = 3
+# ocr-rs hands the pixels to these; the inference itself is native code.
+[profile.dev.package.fast_image_resize]
+opt-level = 3
+[profile.dev.package.imageproc]
+opt-level = 3
+[profile.dev.package.ndarray]
+opt-level = 3

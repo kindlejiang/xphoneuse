@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the hardened-runtime app signature.
+
+  com.apple.security.cs.disable-library-validation: the app dlopen()s the
+  bundled uxplay.dylib (and its dylib closure) from Contents/Resources. Those
+  are signed ad-hoc by scripts/build-uxplay-mac.sh, and hardened runtime turns
+  on library validation, which only loads libraries carrying the *same* team
+  ID. Two ad-hoc signatures have no team ID at all, so dyld rejects the load:
+
+      not valid for use in process: mapping process and mapped file
+      (non-platform) have different Team IDs
+
+  Re-signing the dylib with the same flags does not help (ad-hoc identity is
+  per-signature). Disabling library validation is the supported fix and stays
+  valid under notarization; without it AirPlay mode fails on any packaged
+  build while working in `tauri dev` (dev binaries are not hardened).
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

@@ -1,0 +1,17 @@
+[package]
+name = "xphoneuse-ocr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# PaddleOCR models on MNN. Pinned to a revision rather than the crates.io
+# release on purpose: 2.4.1 downloads its MNN build from a mutable "dev"
+# release tag and verifies nothing, while this revision delegates the native
+# side to mnn-runtime, which checks a SHA-256 before use. See the plan and
+# src-tauri/resources/ocr-NOTICE.txt.
+ocr-rs = { git = "https://github.com/zibo-chen/ocr-rs", rev = "664a945953e46186b37203fa4902a20d60a32809" }
+# Same major version as ocr-rs, whose recognize() takes an image::DynamicImage.
+# Default features (which include the PNG decoder) are required.
+image = "0.25"
+tokio = { version = "1", features = ["rt"] }
+serde = { version = "1", features = ["derive"] }

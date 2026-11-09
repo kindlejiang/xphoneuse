@@ -1,0 +1,32 @@
+[package]
+name = "xphoneuse-mcp"
+version = "0.2.0"
+edition = "2021"
+
+[lib]
+name = "xphoneuse_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "xphoneuse-mcp"
+path = "src/main.rs"
+
+[dependencies]
+xphoneuse-core = { path = "../xphoneuse-core" }
+xphoneuse-ios = { path = "../xphoneuse-ios" }
+xphoneuse-ocr = { path = "../xphoneuse-ocr" }
+# png + jpeg only: a screenshot is decoded, scaled and re-encoded on its
+# way out to a model (see screenshot_for_model in server.rs).
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+rmcp = { version = "1.3", features = ["server", "transport-io", "transport-streamable-http-server"] }
+schemars = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+base64 = "0.22"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive", "env"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio"] }
+tokio-util = "0.7"

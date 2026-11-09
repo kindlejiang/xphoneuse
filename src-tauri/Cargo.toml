@@ -1,0 +1,68 @@
+[package]
+name = "XPhoneUse"
+version = "0.4.0"
+description = "XPhoneUse - agentic phone holder: Android (scrcpy) and iPhone (AirPlay) mirroring and control"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "tauri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "unstable"] } # unstable: child webviews (ad banner)
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+xphoneuse-core = { path = "../crates/xphoneuse-core" }
+xphoneuse-mcp = { path = "../crates/xphoneuse-mcp" }
+xphoneuse-ios = { path = "../crates/xphoneuse-ios" }
+xphoneuse-ocr = { path = "../crates/xphoneuse-ocr" }
+xphoneuse-copilot = { path = "../crates/xphoneuse-copilot" }
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+base64 = "0.22"
+anyhow = "1"
+rodio = { version = "0.19", default-features = false }
+tauri-plugin-updater = "2.10.0"
+tauri-plugin-process = "2"   # relaunch() after an update installs
+tauri-plugin-aptabase = "1.0.0"
+tauri-plugin-single-instance = "2"
+# Start on login (the Settings toggle, on by default). Windows writes the
+# Run key, macOS a LaunchAgent, Linux a ~/.config/autostart entry.
+#
+# Held at 2.5 on purpose: 2.6 and newer require tauri ^2.12, and the tauri
+# crate is still 2.10 - the version @tauri-apps/api and the CLI are on, and
+# the one 1.1.20 shipped with. Lifting this means lifting the whole stack
+# together (npm @tauri-apps/api + cli + crate), not one at a time: the tauri
+# CLI refuses to build when the crate and the npm package are a minor apart.
+tauri-plugin-autostart = "~2.5"
+# Dragging a file *out* of the window to the desktop - the direction tauri
+# itself does not have (its drag-drop is an incoming one, and start_dragging
+# moves the window). CrabNebula's crate, the same organisation as the updater;
+# it wants a real local path and has to be called while the mouse is down, so
+# only files already on this computer can be dragged out.
+drag = "2"
+
+[target.'cfg(windows)'.dependencies]
+# GetAsyncKeyState, so a drag is only started while the button is actually
+# held (see left_button_down in src/files.rs). Same version the drag crate
+# already builds with.
+windows = { version = "0.52", features = [
+    "Win32_UI_Input_KeyboardAndMouse",
+    # SetStdHandle, so a packaged build's stderr can go to a log file
+    # (see redirect_stderr_to_log in lib.rs).
+    "Win32_System_Console",
+] }
+
+[target.'cfg(unix)'.dependencies]
+# dup2 for the same stderr-to-log redirect on macOS/Linux.
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# hide the traffic-light zoom button (already in the tree via tauri)
+objc2 = "0.6"

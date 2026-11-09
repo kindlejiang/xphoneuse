@@ -1,0 +1,19 @@
+[package]
+name = "xphoneuse-copilot"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# The screen text comes from the same offline OCR the MCP `xphoneuse_ocr` tool
+# uses; the copilot only adds the chat-shaped reading of it.
+xphoneuse-ocr = { path = "../xphoneuse-ocr" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "macros", "time"] }
+# Same shape as xphoneuse-ios: no TLS backend of reqwest's own, sharing the ring
+# provider tauri and idevice already put in the process (see `http::ensure_crypto_provider`).
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros", "time"] }
